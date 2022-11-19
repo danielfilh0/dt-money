@@ -1,3 +1,4 @@
+import { useContextSelector } from 'use-context-selector'
 import * as Dialog from '@radix-ui/react-dialog'
 import { ArrowCircleDown, ArrowCircleUp, X } from 'phosphor-react'
 import * as z from 'zod'
@@ -12,7 +13,6 @@ import {
   TransactionTypeButton,
 } from './styles'
 import { TransactionContext } from '../../contexts/TransactionsContext'
-import { useContextSelector } from 'use-context-selector'
 
 const newTransactionFormSchema = z.object({
   description: z.string(),
@@ -24,49 +24,57 @@ const newTransactionFormSchema = z.object({
 type NewTransactionFormInputs = z.infer<typeof newTransactionFormSchema>
 
 interface NewTransactionModalProps {
+  id: number
   handleModal: (status: boolean) => void
 }
 
-export function NewTransactionModal({ handleModal }: NewTransactionModalProps) {
-  const createTransaction = useContextSelector(
+export function EditTransactionModal({
+  id,
+  handleModal,
+}: NewTransactionModalProps) {
+  const { transactions, editTransactions } = useContextSelector(
     TransactionContext,
     (context) => {
-      return context.createTransaction
+      return {
+        transactions: context.transactions,
+        editTransactions: context.editTransaction,
+      }
     },
   )
+
+  const transaction = transactions.find((transaction) => transaction.id === id)
 
   const {
     control,
     register,
     handleSubmit,
     formState: { isSubmitting },
-    reset,
   } = useForm<NewTransactionFormInputs>({
     resolver: zodResolver(newTransactionFormSchema),
     defaultValues: {
-      type: 'income',
+      description: transaction?.description,
+      price: transaction?.price,
+      category: transaction?.category,
+      type: transaction?.type,
     },
   })
 
-  async function handleCreateNewTransaction(data: NewTransactionFormInputs) {
-    await createTransaction(data)
-
+  async function handleEditTransaction(data: NewTransactionFormInputs) {
+    await editTransactions(id, data)
     handleModal(false)
-
-    reset()
   }
 
   return (
     <Dialog.Portal>
       <Overlay />
       <Content>
-        <Dialog.Title>Nova transação</Dialog.Title>
+        <Dialog.Title>Editar transação</Dialog.Title>
 
         <CloseButton>
           <X />
         </CloseButton>
 
-        <form onSubmit={handleSubmit(handleCreateNewTransaction)}>
+        <form onSubmit={handleSubmit(handleEditTransaction)}>
           <input
             type="text"
             placeholder="Descrição"
@@ -110,7 +118,7 @@ export function NewTransactionModal({ handleModal }: NewTransactionModalProps) {
           />
 
           <button type="submit" disabled={isSubmitting}>
-            Cadastrar
+            Editar
           </button>
         </form>
       </Content>
